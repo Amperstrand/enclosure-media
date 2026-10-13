@@ -3,15 +3,25 @@
 Photoreal Blender renders and animations of enclosure-forge targets,
 rendered headless on GPU (ai-legion-small, RTX 3060 Ti, Cycles CUDA).
 
-## Nucula V4 payment terminal — hero
+## Hero animations (4 s, 1080p, 30fps)
 
-- [`nucula_hero.mkv`](nucula_hero.mkv) — 5.5 s, 1080p: exploded assembly
-  (bottom, board, battery, glass, keypad, lid) settles together, then a
-  slow turntable.
-- Stills: [`still_033.png`](still_033.png) (exploded),
-  [`still_062.png`](still_062.png) (assembled),
-  [`still_132.png`](still_132.png) (turntable).
+| Board | Video | Stills |
+|---|---|---|
+| Nucula V6 | [`nucula_hero.mkv`](nucula_hero.mkv) | below |
+| RP2040 dev board | [`renders/rp2040-devboard_hero.mkv`](renders/rp2040-devboard_hero.mkv) | below |
+| Easyduino ESP32 | [`renders/easyduino-esp32_hero.mkv`](renders/easyduino-esp32_hero.mkv) | below |
+| Easyduino ESP32-S3 | [`renders/easyduino-esp32s3_hero.mkv`](renders/easyduino-esp32s3_hero.mkv) | below |
+| Easyduino Pico | [`renders/easyduino-pico_hero.mkv`](renders/easyduino-pico_hero.mkv) | below |
+| Specter-DIY | [`renders/specter-diy-case_hero.mkv`](renders/specter-diy-case_hero.mkv) | below |
 
-Scene script: [enclosure-forge/harness/blender/nucula_hero.py]
-(https://github.com/Amperstrand/enclosure-forge/blob/main/harness/blender/nucula_hero.py) —
-parts import pre-positioned from the validated CAD exports.
+Every animation: exploded assembly settles together, then a clean
+360° orbit with the camera locked on the device center (track-to
+constraint, 85mm lens, probe-verified zero drift).
+
+Scene: [enclosure-forge/harness/blender/hero_generic.py](https://github.com/Amperstrand/enclosure-forge/blob/main/harness/blender/hero_generic.py)
+— works with any enclosure repo's STL exports.
+
+## Stills (1920×1080)
+
+See `renders/` directory for stills at three moments per board:
+exploded (frame ~24), assembled (frame ~46), turntable (frame ~96).
