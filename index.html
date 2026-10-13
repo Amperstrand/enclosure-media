@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>enclosure-forge — gallery</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1117; color: #c9d1d9; font-family: -apple-system,
+         BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: hidden; }
+  header { padding: 40px 24px 20px; text-align: center; }
+  header h1 { font-size: 28px; font-weight: 600; color: #e6edf3; }
+  header p { color: #8b949e; margin-top: 8px; font-size: 14px; }
+  header a { color: #58a6e2; text-decoration: none; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+          padding: 12px 24px; }
+  .tab { padding: 8px 16px; border-radius: 8px; border: 1px solid #30363d;
+         background: #161b22; color: #c9d1d9; font-size: 13px; cursor: pointer;
+         transition: all .15s; }
+  .tab:hover { border-color: #58a6e2; }
+  .tab.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+  .content { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
+
+  .viewer-wrap { position: relative; border-radius: 12px; overflow: hidden;
+                 border: 1px solid #30363d; background: #161b22;
+                 min-height: 500px; }
+  #viewer { width: 100%; height: 500px; display: block; }
+  .viewer-hint { position: absolute; bottom: 12px; right: 16px;
+                 font-size: 11px; color: #6e7681; pointer-events: none; }
+  .toggle-row { position: absolute; top: 12px; left: 16px; display: flex;
+                gap: 14px; }
+  .toggle-row label { font-size: 12px; color: #8b949e; display: flex;
+                      align-items: center; gap: 4px; cursor: pointer;
+                      background: rgba(13,17,23,.8); padding: 4px 10px;
+                      border-radius: 6px; border: 1px solid #30363d; }
+  .toggle-row input { accent-color: #58a6e2; }
+
+  .media-section { margin-top: 32px; }
+  .media-section h2 { font-size: 18px; color: #e6edf3; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill,
+          minmax(340px, 1fr)); gap: 16px; }
+  .card { border-radius: 10px; overflow: hidden; border: 1px solid #30363d;
+          background: #161b22; }
+  .card video { width: 100%; display: block; border-radius: 10px 10px 0 0; }
+  .card img { width: 100%; display: block; border-radius: 10px 10px 0 0; }
+  .card .caption { padding: 10px 14px; font-size: 12px; color: #8b949e; }
+
+  .meta { margin-top: 20px; padding: 16px; border-radius: 10px;
+          background: #161b22; border: 1px solid #30363d;
+          font-size: 13px; color: #8b949e; line-height: 1.6; }
+  .meta a { color: #58a6e2; }
+</style>
+</head>
+<body>
+<header>
+  <h1>enclosure-forge gallery</h1>
+  <p>7 boards → validated enclosures → photoreal renders → interactive 3D.
+     <a href="https://github.com/Amperstrand/enclosure-forge">the framework</a></p>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="content">
+  <div class="viewer-wrap">
+    <canvas id="viewer"></canvas>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="tLid" checked> lid</label>
+      <label><input type="checkbox" id="tBoard" checked> board</label>
+      <label><input type="checkbox" id="tExplode"> explode</label>
+    </div>
+    <div class="viewer-hint">drag = orbit · wheel = zoom</div>
+  </div>
+  <div class="meta" id="meta"></div>
+
+  <div class="media-section">
+    <h2>Hero animation</h2>
+    <div class="grid"><div class="card" id="videoCard"></div></div>
+  </div>
+
+  <div class="media-section">
+    <h2>Stills</h2>
+    <div class="grid" id="stills"></div>
+  </div>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/STLLoader.js"></script>
+<script>
+const BOARDS = {
+  "nucula": {
+    label: "Nucula V6",
+    parts: [["bottom","nucula__bottom.stl",0x2f3a45,0],
+            ["lid","nucula__lid.stl",0x3c4a57,0],
+            ["board","nucula__board.stl",0x1a6e8a,0],
+            ["keypad","nucula__keypad.stl",0x23282d,15]],
+    video: "media/nucula_hero.mkv",
+    stills: ["nucula_exploded.png","nucula_assembled.png","nucula_turntable.png"],
+    desc: "Payment-terminal slab: uniform silhouette, flush OLED + keypad well, NFC membrane, 104 checks.",
+    repo: "https://github.com/Amperstrand/nucula-enclosure",
+    score: "0.80", checks: "104/104"
+  },
+  "rp2040": {
+    label: "RP2040 dev board",
+    parts: [["bottom","rp2040-devboard__bottom.stl",0x2f3a45,0],
+            ["lid","rp2040-devboard__lid.stl",0x3c4a57,0]],
+    video: "media/rp2040-devboard_hero.mkv",
+    stills: ["rp2040-devboard_exploded.png","rp2040-devboard_assembled.png","rp2040-devboard_turntable.png"],
+    desc: "First fully-LM-mode board: S2/S3/S4 through the opencode pipe. M2.5 bosses at measured holes, micro-USB envelope.",
+    repo: "https://github.com/Amperstrand/rp2040-devboard-enclosure",
+    score: "1.00", checks: "7/7"
+  },
+  "esp32": {
+    label: "Easyduino ESP32",
+    parts: [["bottom","easyduino-esp32__bottom.stl",0x2f3a45,0],
+            ["lid","easyduino-esp32__lid.stl",0x3c4a57,0]],
+    video: "media/easyduino-esp32_hero.mkv",
+    stills: ["easyduino-esp32_exploded.png","easyduino-esp32_assembled.png","easyduino-esp32_turntable.png"],
+    desc: "First zero-hole board → pad-and-rail retention class (SimHat-cage lineage).",
+    repo: "https://github.com/Amperstrand/easyduino-esp32-enclosure",
+    score: "0.85", checks: "7/7"
+  },
+  "esp32s3": {
+    label: "Easyduino ESP32-S3",
+    parts: [["bottom","easyduino-esp32s3__bottom.stl",0x2f3a45,0],
+            ["lid","easyduino-esp32s3__lid.stl",0x3c4a57,0]],
+    video: "media/easyduino-esp32s3_hero.mkv",
+    stills: ["easyduino-esp32s3_exploded.png","easyduino-esp32s3_assembled.png","easyduino-esp32s3_turntable.png"],
+    desc: "Template reuse milestone: zero debug iterations on first validation.",
+    repo: "https://github.com/Amperstrand/easyduino-esp32s3-enclosure",
+    score: "1.00", checks: "7/7"
+  },
+  "pico": {
+    label: "Easyduino Pico",
+    parts: [["bottom","easyduino-pico__bottom.stl",0x2f3a45,0],
+            ["lid","easyduino-pico__lid.stl",0x3c4a57,0]],
+    video: "media/easyduino-pico_hero.mkv",
+    stills: ["easyduino-pico_exploded.png","easyduino-pico_assembled.png","easyduino-pico_turntable.png"],
+    desc: "Template reuse milestone: zero debug iterations. Authentic slanted-end hole at u 16.59.",
+    repo: "https://github.com/Amperstrand/easyduino-pico-enclosure",
+    score: "1.00", checks: "7/7"
+  },
+  "specter": {
+    label: "Specter-DIY",
+    parts: [["bottom","specter-diy-case__bottom.stl",0x2f3a45,0],
+            ["lid","specter-diy-case__lid.stl",0x3c4a57,0]],
+    video: "media/specter-diy-case_hero.mkv",
+    stills: ["specter-diy-case_exploded.png","specter-diy-case_assembled.png","specter-diy-case_turntable.png"],
+    desc: "Reproduction milestone: measured from the human snapcase STLs. Guide-rail retention + lid clamp + cable channels. Matches/beats the human on every static metric.",
+    repo: "https://github.com/Amperstrand/specter-diy-case",
+    score: "0.80", checks: "7/7"
+  }
+};
+
+let currentKey = "nucula";
+let meshes = {};
+let explodeT = 0;
+let scene, camera, renderer, st;
+
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161b22);
+renderer = new THREE.WebGLRenderer({canvas: document.getElementById("viewer"),
+                                    antialias: true});
+renderer.setPixelRatio(devicePixelRatio);
+
+scene.add(new THREE.DirectionalLight(0xffffff, 0.95)
+  .translateX(90).translateY(-130).translateZ(170));
+scene.add(new THREE.DirectionalLight(0xbfd4dd, 0.45)
+  .translateX(-120).translateY(-40).translateZ(60));
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+camera = new THREE.PerspectiveCamera(36, 2, 1, 4000);
+
+// orbit control
+const ctl = {az: 0.7, el: 0.32, r: 200, drag: false, px: 0, py: 0};
+const cvs = renderer.domElement;
+cvs.addEventListener("mousedown", e => { ctl.drag=true; ctl.px=e.clientX; ctl.py=e.clientY; });
+addEventListener("mouseup", () => ctl.drag=false);
+addEventListener("mousemove", e => {
+  if (!ctl.drag) return;
+  ctl.az -= (e.clientX - ctl.px) * 0.006;
+  ctl.el = Math.max(0.05, Math.min(1.4, ctl.el + (e.clientY - ctl.py) * 0.006));
+  ctl.px = e.clientX; ctl.py = e.clientY;
+});
+cvs.addEventListener("wheel", e => { ctl.r *= 1 + Math.sign(e.deltaY) * 0.07; },
+                     {passive: true});
+
+function loadBoard(key) {
+  currentKey = key;
+  const b = BOARDS[key];
+  // clear
+  for (const k in meshes) { scene.remove(meshes[k]); }
+  meshes = {};
+  let loaded = 0;
+  const total = b.parts.length;
+  for (const [tag, file, color, lift] of b.parts) {
+    new THREE.STLLoader().load("models/" + file, geo => {
+      const m = new THREE.Mesh(geo,
+        new THREE.MeshPhongMaterial({color, shininess: 42}));
+      m.userData = {tag, lift};
+      scene.add(m);
+      meshes[tag] = m;
+      if (++loaded === total) frameScene();
+    });
+  }
+  updateMeta(b);
+  updateMedia(b);
+}
+
+function frameScene() {
+  const box = new THREE.Box3();
+  for (const k in meshes) {
+    if (!meshes[k].visible) continue;
+    box.expandByObject(meshes[k]);
+  }
+  if (box.isEmpty()) return;
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const rad = Math.max(size.x, size.y, size.z);
+  ctl.r = rad * 2.4 + 30;
+  st = {center, rad};
+}
+
+function updateVisibility() {
+  const showLid = document.getElementById("tLid").checked;
+  const showBoard = document.getElementById("tBoard").checked;
+  explodeT = document.getElementById("tExplode").checked ? 1 : 0;
+  for (const k in meshes) {
+    const tag = meshes[k].userData.tag;
+    if (tag === "lid") meshes[k].visible = showLid;
+    if (tag === "board" || tag === "keypad") meshes[k].visible = showBoard;
+    if (meshes[k].userData.lift) {
+      meshes[k].position.z = meshes[k].userData.lift * explodeT;
+    }
+  }
+}
+
+function updateMeta(b) {
+  document.getElementById("meta").innerHTML =
+    `<b style="color:#e6edf3">${b.label}</b> — ${b.desc}<br>` +
+    `forge score <b>${b.score}</b> · ${b.checks} checks · ` +
+    `<a href="${b.repo}" target="_blank">repo</a>`;
+}
+
+function updateMedia(b) {
+  document.getElementById("videoCard").innerHTML =
+    `<video controls loop muted playsinline src="${b.video}"></video>` +
+    `<div class="caption">${b.label} — hero animation (4s, 1080p)</div>`;
+  const s = document.getElementById("stills");
+  s.innerHTML = "";
+  for (const still of b.stills) {
+    s.innerHTML += `<div class="card"><img src="media/${still}" loading="lazy">` +
+      `<div class="caption">${still.replace(/_/g,' ').replace('.png','')}</div></div>`;
+  }
+}
+
+// tabs
+const tabsEl = document.getElementById("tabs");
+Object.entries(BOARDS).forEach(([key, b]) => {
+  const t = document.createElement("button");
+  t.className = "tab" + (key === currentKey ? " active" : "");
+  t.textContent = b.label;
+  t.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    loadBoard(key);
+  };
+  tabsEl.appendChild(t);
+});
+["tLid","tBoard","tExplode"].forEach(id =>
+  document.getElementById(id).onchange = updateVisibility);
+
+function resize() {
+  const w = cvs.parentElement.clientWidth;
+  renderer.setSize(w, 500);
+  camera.aspect = w / 500;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+loadBoard(currentKey);
+
+(function tick() {
+  if (st) {
+    camera.position.set(
+      st.center.x + ctl.r * Math.cos(ctl.el) * Math.sin(ctl.az),
+      st.center.y - ctl.r * Math.cos(ctl.el) * Math.cos(ctl.az),
+      st.center.z + ctl.r * Math.sin(ctl.az) * 0 + ctl.r * Math.sin(ctl.el));
+    camera.lookAt(st.center);
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
